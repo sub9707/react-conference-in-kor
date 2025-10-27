@@ -9,7 +9,7 @@ interface ScrollAnimationOptions {
 export function useScrollAnimation(
   options: ScrollAnimationOptions = {}
 ): [RefObject<HTMLDivElement|null>, boolean] {
-  const ref = useRef<HTMLDivElement | null>(null);
+  const ref = useRef<HTMLDivElement|null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {

@@ -1,5 +1,4 @@
-// client/src/services/api.ts
-import { Article, YearStat, ApiResponse, ArticlesResponse } from '../types';
+import type { Article, YearStat, ApiResponse, ArticlesResponse } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 

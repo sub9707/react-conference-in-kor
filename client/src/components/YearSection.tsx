@@ -1,7 +1,6 @@
-// client/src/components/YearSection.tsx
 import ArticleCard from './ArticleCard';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
-import { type Article } from '../types';
+import type { Article } from '../types';
 
 interface YearSectionProps {
   year: number;

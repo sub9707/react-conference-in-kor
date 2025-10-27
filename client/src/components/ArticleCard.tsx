@@ -1,7 +1,6 @@
-// client/src/components/ArticleCard.tsx
 import { Link } from 'react-router-dom';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
-import { type Article } from '../types';
+import type { Article } from '../types';
 
 interface ArticleCardProps {
   article: Article;
@@ -26,7 +25,7 @@ export default function ArticleCard({ article, index }: ArticleCardProps) {
     >
       <Link to={`/article/${article.slug}`} className="group block">
         <article className="h-full bg-light-surface dark:bg-dark-surface rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-          <div className="relative h-48 overflow-hidden bg-gradient-to-br from-sky-400 to-blue-500 dark:from-sky-500 dark:to-blue-600">
+          <div className="relative h-48 overflow-hidden bg-linear-to-br from-sky-400 to-blue-500 dark:from-sky-500 dark:to-blue-600">
             {article.thumbnail ? (
               <img
                 src={article.thumbnail}

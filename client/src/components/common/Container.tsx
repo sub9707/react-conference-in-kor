@@ -1,5 +1,4 @@
-// client/src/components/common/Container.tsx
-import { type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 interface ContainerProps {
   children: ReactNode;

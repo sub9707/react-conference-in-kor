@@ -55,8 +55,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg transition-colors duration-300">
       <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-900" />
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
         
         <Container className="relative z-10">
           <div
@@ -66,32 +64,17 @@ export default function Home() {
             }`}
           >
             <h1 className="text-6xl md:text-7xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 dark:from-sky-400 dark:via-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                React Conference
+              <span className="bg-linear-to-r from-sky-500 via-blue-500 to-indigo-500 dark:from-sky-400 dark:via-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                React Pocket Note
               </span>
               <br />
-              <span className="text-light-text dark:text-dark-text">Learning Hub</span>
+              <span className="text-light-text dark:text-dark-text">Learning Blog</span>
             </h1>
             
             <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
-              React 컨퍼런스의 주요 내용을 한국어로 학습하세요
+              React 컨퍼런스와 업데이트 내용을 한국어로 정리했습니다
             </p>
 
-            <div className="flex justify-center gap-8 flex-wrap">
-              {yearStats.map((stat) => (
-                <div
-                  key={stat.year}
-                  className="px-6 py-3 bg-light-surface dark:bg-dark-surface rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                >
-                  <div className="text-3xl font-bold text-sky-600 dark:text-sky-400">
-                    {stat.count}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {stat.year}년
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </Container>
 

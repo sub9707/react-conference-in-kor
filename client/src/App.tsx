@@ -1,4 +1,3 @@
-// client/src/App.tsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import ThemeToggle from './components/common/ThemeToggle';

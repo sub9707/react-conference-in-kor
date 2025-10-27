@@ -1,4 +1,3 @@
-// client/src/contexts/ThemeContext.tsx
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 interface ThemeContextType {
