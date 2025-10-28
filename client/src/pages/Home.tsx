@@ -63,11 +63,10 @@ export default function Home() {
               heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
-            <h1 className="text-6xl md:text-7xl font-bold mb-6">
-              <span className="bg-linear-to-r from-sky-500 via-blue-500 to-indigo-500 dark:from-sky-400 dark:via-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+            <h1 className="text-6xl md:text-7xl font-bold mb-12">
+              <span className="bg-linear-to-r from-sky-500 via-blue-500 to-indigo-500 dark:from-sky-400 dark:via-blue-400 dark:to-indigo-400 bg-clip-text text-transparent text-8xl block mb-5">
                 React Pocket Note
               </span>
-              <br />
               <span className="text-light-text dark:text-dark-text">Learning Blog</span>
             </h1>
             
