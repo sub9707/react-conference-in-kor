@@ -1,8 +1,13 @@
-import { Suspense } from 'react';
+// client/src/pages/ArticleDetail.tsx
+
+import { Suspense, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Container from '../components/common/Container';
 import BlockRenderer from '../components/blocks/BlockRenderer';
+import TableOfContents from '../components/article/TableOfContent';
+import MobileTableOfContents from '../components/article/MobileTableOfContents';
 import { useArticle } from '../hooks/useArticles';
+import { useTableOfContents } from '../hooks/useTableOfContents';
 
 function ArticleDetailSkeleton() {
   return (
@@ -22,6 +27,31 @@ function ArticleContent() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { article, error, isPending } = useArticle(slug!);
+  
+  const blocks = article?.content?.blocks || [];
+  const { tocItems, activeId, handleScroll, scrollToHeading } = useTableOfContents(blocks);
+
+  // 스크롤 이벤트 리스너 (throttle 적용)
+  useEffect(() => {
+    if (tocItems.length === 0) return;
+
+    let timeoutId: number;
+    const throttledScroll = () => {
+      if (timeoutId) return;
+      timeoutId = window.setTimeout(() => {
+        handleScroll();
+        timeoutId = 0;
+      }, 100);
+    };
+
+    window.addEventListener('scroll', throttledScroll, { passive: true });
+    handleScroll(); // 초기 실행
+
+    return () => {
+      window.removeEventListener('scroll', throttledScroll);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [tocItems, handleScroll]);
 
   if (isPending) {
     return (
@@ -66,7 +96,21 @@ function ArticleContent() {
   });
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg transition-colors duration-300">
+    <div className="min-h-screen bg-light-bg dark:bg-dark-bg transition-colors duration-300 relative">
+      {/* 데스크톱 목차 네비게이션 */}
+      <TableOfContents 
+        items={tocItems} 
+        activeId={activeId} 
+        onItemClick={scrollToHeading} 
+      />
+
+      {/* 모바일 목차 네비게이션 */}
+      <MobileTableOfContents
+        items={tocItems}
+        activeId={activeId}
+        onItemClick={scrollToHeading}
+      />
+
       <Container className="py-16">
         <button
           onClick={() => navigate('/')}

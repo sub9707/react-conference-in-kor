@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { ParagraphBlock as ParagraphBlockType } from '../../types';
-import RichTextRenderer from '../common/Richtextrenderer';
+import RichTextRenderer from '../common/RichTextRenderer';
 
 interface ParagraphBlockProps {
   block: ParagraphBlockType;

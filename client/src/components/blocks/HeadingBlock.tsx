@@ -1,16 +1,14 @@
-import { useId } from 'react';
 import type { HeadingBlock as HeadingBlockType } from '../../types';
-import RichTextRenderer from '../common/Richtextrenderer';
+import RichTextRenderer from '../common/RichTextRenderer';
 
 interface HeadingBlockProps {
   block: HeadingBlockType;
 }
 
 export default function HeadingBlock({ block }: HeadingBlockProps) {
-  const headingId = useId();
-  const { level, content } = block;
+  const { id, level, content } = block;
 
-  const baseClass = "font-bold text-gray-900 dark:text-gray-100 mb-4 mt-8";
+  const baseClass = "font-bold text-gray-900 dark:text-gray-100 mb-4 mt-8 scroll-mt-24";
   
   const Component: React.ElementType = `h${level}`;
   const sizeClasses = {
@@ -20,7 +18,7 @@ export default function HeadingBlock({ block }: HeadingBlockProps) {
   };
 
   return (
-    <Component id={headingId} className={`${baseClass} ${sizeClasses[level]}`}>
+    <Component id={id} className={`${baseClass} ${sizeClasses[level]}`}>
       <RichTextRenderer content={content} />
     </Component>
   );

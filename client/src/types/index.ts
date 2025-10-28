@@ -115,3 +115,9 @@ export interface ApiResponse<T> {
 export interface ArticlesResponse extends ApiResponse<Article[]> {
   count: number;
 }
+
+export interface TocItem {
+  id: string;
+  text: string;
+  level: 1 | 2 | 3;
+}

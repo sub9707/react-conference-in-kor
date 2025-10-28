@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { ListBlock as ListBlockType } from '../../types';
-import RichTextRenderer from '../common/Richtextrenderer';
+import RichTextRenderer from '../common/RichTextRenderer';
 
 interface ListBlockProps {
   block: ListBlockType;

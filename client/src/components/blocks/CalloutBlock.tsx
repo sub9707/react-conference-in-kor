@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { CalloutBlock as CalloutBlockType } from '../../types';
-import RichTextRenderer from '../common/Richtextrenderer';
+import RichTextRenderer from '../common/RichTextRenderer';
 
 interface CalloutBlockProps {
   block: CalloutBlockType;
