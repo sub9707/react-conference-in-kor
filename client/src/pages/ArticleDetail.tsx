@@ -1,10 +1,8 @@
-// client/src/pages/ArticleDetail.tsx
-import { Suspense, useEffect } from 'react';
+import { Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Container from '../components/common/Container';
 import BlockRenderer from '../components/blocks/BlockRenderer';
 import { useArticle } from '../hooks/useArticles';
-import { useScrollAnimation } from '../hooks/useScrollAnimation';
 
 function ArticleDetailSkeleton() {
   return (
@@ -23,12 +21,7 @@ function ArticleDetailSkeleton() {
 function ArticleContent() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { article, error, isPending, loadArticle } = useArticle(slug!);
-  const [contentRef, isVisible] = useScrollAnimation({ threshold: 0.1, once: true });
-
-  useEffect(() => {
-    loadArticle();
-  }, [slug]);
+  const { article, error, isPending } = useArticle(slug!);
 
   if (isPending) {
     return (
@@ -85,67 +78,57 @@ function ArticleContent() {
           <span>목록으로 돌아가기</span>
         </button>
 
-        <article
-          ref={contentRef}
-          className={`max-w-4xl mx-auto transition-all duration-700 ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}
-        >
-          <header className="mb-12 pb-8 border-b border-gray-200 dark:border-gray-700">
+        <article className="max-w-4xl mx-auto">
+          <header className="mb-12">
+            <div className="flex items-center gap-2 mb-4 text-sm text-gray-600 dark:text-gray-400">
+              <span className="px-3 py-1 bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 rounded-full font-medium">
+                {article.year}
+              </span>
+              {article.conference && (
+                <>
+                  <span>•</span>
+                  <span>{article.conference}</span>
+                </>
+              )}
+              {article.speaker && (
+                <>
+                  <span>•</span>
+                  <span>{article.speaker}</span>
+                </>
+              )}
+            </div>
+
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+              {article.title}
+            </h1>
+
+            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-500 mb-6">
+              <time dateTime={article.date}>
+                {formattedDate}
+              </time>
+            </div>
+
             {article.tags && article.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {article.tags.map((tag) => (
+              <div className="flex flex-wrap gap-2 mb-6">
+                {article.tags.map((tag, index) => (
                   <span
-                    key={tag}
-                    className="px-3 py-1 text-sm font-medium rounded-full bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300"
+                    key={index}
+                    className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full"
                   >
-                    {tag}
+                    #{tag}
                   </span>
                 ))}
               </div>
             )}
 
-            <h1 className="text-4xl md:text-5xl font-bold text-light-text dark:text-dark-text mb-6 leading-tight">
-              {article.title}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-4 text-gray-600 dark:text-gray-400">
-              {article.speaker && (
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span className="font-medium">{article.speaker}</span>
-                </div>
-              )}
-              
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <time dateTime={article.date}>{formattedDate}</time>
-              </div>
-
-              {article.conference && (
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  <span className="font-semibold text-sky-600 dark:text-sky-400">
-                    {article.conference}
-                  </span>
-                </div>
-              )}
-            </div>
-
             {article.summary && (
-              <p className="mt-6 text-xl text-gray-700 dark:text-gray-300 leading-relaxed">
+              <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed border-l-4 border-sky-500 pl-4 py-2">
                 {article.summary}
               </p>
             )}
           </header>
 
-          <div className="prose prose-lg dark:prose-invert max-w-none text-black">
+          <div className="max-w-none space-y-4">
             {article.content?.blocks.map((block) => (
               <BlockRenderer key={block.id} block={block} />
             ))}

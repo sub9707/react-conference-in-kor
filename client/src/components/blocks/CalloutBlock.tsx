@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { CalloutBlock as CalloutBlockType } from '../../types';
+import RichTextRenderer from '../common/Richtextrenderer';
 
 interface CalloutBlockProps {
   block: CalloutBlockType;
@@ -57,10 +58,12 @@ export default function CalloutBlock({ block }: CalloutBlockProps) {
   return (
     <div id={calloutId} className={`${style.bg} ${style.border} ${style.text} border-l-4 p-4 rounded-r-lg mb-6`}>
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 mt-0.5">
+        <div className="shrink-0 mt-0.5">
           {style.icon}
         </div>
-        <p className="leading-relaxed">{content}</p>
+        <p className="leading-relaxed">
+          <RichTextRenderer content={content} />
+        </p>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-// client/src/types.ts
+// client/src/types/index.ts
 
 export interface Article {
   id: number;
@@ -23,6 +23,26 @@ export interface ArticleContent {
   blocks: Block[];
 }
 
+// 인라인 텍스트 스타일
+export interface TextStyle {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  strikethrough?: boolean;
+  code?: boolean;
+  color?: 'default' | 'gray' | 'brown' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'red';
+  backgroundColor?: 'default' | 'gray' | 'brown' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'red';
+}
+
+// 리치 텍스트 조각
+export interface TextSegment {
+  text: string;
+  styles?: TextStyle;
+}
+
+// 리치 텍스트 (문자열 또는 세그먼트 배열)
+export type RichText = string | TextSegment[];
+
 export type Block = 
   | HeadingBlock
   | ParagraphBlock
@@ -36,13 +56,13 @@ export interface HeadingBlock {
   id: string;
   type: 'heading';
   level: 1 | 2 | 3;
-  content: string;
+  content: RichText;
 }
 
 export interface ParagraphBlock {
   id: string;
   type: 'paragraph';
-  content: string;
+  content: RichText;
 }
 
 export interface CodeBlock {
@@ -56,14 +76,14 @@ export interface ListBlock {
   id: string;
   type: 'list';
   listType: 'bullet' | 'numbered' | 'checkbox';
-  items: string[];
+  items: RichText[];
 }
 
 export interface CalloutBlock {
   id: string;
   type: 'callout';
   variant: 'info' | 'warning' | 'error' | 'success';
-  content: string;
+  content: RichText;
 }
 
 export interface ImageBlock {

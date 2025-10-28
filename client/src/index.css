@@ -1,13 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-light-bg: #f8fafc;
-  --color-light-surface: #ffffff;
-  --color-light-text: #1e293b;
+  /* 라이트 모드 - Claude 스타일의 따뜻한 베이지/크림 톤 */
+  --color-light-bg: #FAF9F6;
+  --color-light-surface: #FFFFFF;
+  --color-light-text: #2D2D2D;
   
-  --color-dark-bg: #0f172a;
-  --color-dark-surface: #1e293b;
-  --color-dark-text: #f1f5f9;
+  /* 다크 모드 - 깊은 회색 톤 */
+  --color-dark-bg: #1A1A1A;
+  --color-dark-surface: #2A2A2A;
+  --color-dark-text: #E5E5E5;
 }
 
 @layer base {
@@ -45,12 +47,29 @@
     overflow: hidden;
   }
 
+  /* 라이트 모드 그리드 패턴 - 더 부드러운 베이지 톤 */
   .bg-grid-pattern {
     background-image: 
-      linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+      linear-gradient(to right, rgba(139, 125, 107, 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(139, 125, 107, 0.08) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  /* 다크 모드 그리드 패턴 */
+  .dark .bg-grid-pattern {
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     background-size: 20px 20px;
   }
 }
 
 @variant dark (&:where(.dark, .dark *));
+
+
+
+
+
+
+
+
