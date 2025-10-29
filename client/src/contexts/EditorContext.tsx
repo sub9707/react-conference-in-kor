@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode, useTransition, useId } from 'react';
+import { createContext, useContext, useState, ReactNode, useTransition, useId, useCallback, useRef } from 'react';
+import { useAuth } from './AuthContext';
 import type { Block, Article, ArticleContent } from '../types';
 
 interface EditorContextType {
@@ -6,6 +7,8 @@ interface EditorContextType {
   blocks: Block[];
   isPending: boolean;
   isDirty: boolean;
+  isSaving: boolean;
+  lastSaved: Date | null;
   createNewArticle: () => void;
   loadArticle: (article: Article) => void;
   updateMetadata: (data: Partial<Article>) => void;
@@ -15,29 +18,95 @@ interface EditorContextType {
   duplicateBlock: (id: string) => void;
   moveBlock: (fromId: string, toId: string) => void;
   getContent: () => ArticleContent;
+  saveNow: () => Promise<void>;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
+const AUTO_SAVE_DELAY = 2000;
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 export const EditorProvider = ({ children }: { children: ReactNode }) => {
+  const { token } = useAuth();
   const [article, setArticle] = useState<Article | null>(null);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isPending, startTransition] = useTransition();
   const baseId = useId();
+  const autoSaveTimerRef = useRef<number | null>(null);
 
-  const createNewArticle = () => {
+  const performSave = useCallback(async () => {
+    if (!article || !isDirty || article.id === 0 || !token) return;
+
+    setIsSaving(true);
+
+    try {
+      const content = { blocks };
+      const updatedArticle = {
+        ...article,
+        content,
+        updated_at: new Date().toISOString(),
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/articles/${article.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedArticle),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to save: ${response.status}`);
+      }
+
+      const savedArticle = await response.json();
+      
+      setArticle(savedArticle);
+      setIsDirty(false);
+      setLastSaved(new Date());
+      
+      console.log('✅ Auto-saved successfully at', new Date().toLocaleTimeString());
+    } catch (error) {
+      console.error('❌ Auto-save failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [article, blocks, isDirty, token]);
+
+  const scheduleAutoSave = useCallback(() => {
+    if (autoSaveTimerRef.current !== null) {
+      window.clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = window.setTimeout(() => {
+      performSave();
+    }, AUTO_SAVE_DELAY);
+  }, [performSave]);
+
+  const markDirtyAndScheduleSave = useCallback(() => {
+    setIsDirty(true);
+    scheduleAutoSave();
+  }, [scheduleAutoSave]);
+
+  const createNewArticle = useCallback(() => {
+    const now = new Date();
     const newArticle: Article = {
       id: 0,
       title: '',
       slug: '',
-      year: new Date().getFullYear(),
-      date: new Date().toISOString().split('T')[0],
+      year: now.getFullYear(),
+      date: now.toISOString().split('T')[0],
       tags: [],
       published: false,
       view_count: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
     };
 
     const initialBlock: Block = {
@@ -49,23 +118,29 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setArticle(newArticle);
     setBlocks([initialBlock]);
     setIsDirty(false);
-  };
+    setLastSaved(null);
+  }, [baseId]);
 
-  const loadArticle = (loadedArticle: Article) => {
-    setArticle(loadedArticle);
-    setBlocks(loadedArticle.content?.blocks || []);
+  const loadArticle = useCallback((loadedArticle: Article) => {
+    const formattedArticle = {
+      ...loadedArticle,
+      date: loadedArticle.date.includes('T') 
+        ? loadedArticle.date.split('T')[0] 
+        : loadedArticle.date,
+    };
+    
+    setArticle(formattedArticle);
+    setBlocks(formattedArticle.content?.blocks || []);
     setIsDirty(false);
-  };
+    setLastSaved(new Date(formattedArticle.updated_at));
+  }, []);
 
-  const updateMetadata = (data: Partial<Article>) => {
-    if (!article) return;
-    startTransition(() => {
-      setArticle({ ...article, ...data });
-      setIsDirty(true);
-    });
-  };
+  const updateMetadata = useCallback((data: Partial<Article>) => {
+    setArticle(prev => prev ? { ...prev, ...data } : null);
+    markDirtyAndScheduleSave();
+  }, [markDirtyAndScheduleSave]);
 
-  const addBlock = (afterBlockId?: string, type: Block['type'] = 'paragraph') => {
+  const addBlock = useCallback((afterBlockId?: string, type: Block['type'] = 'paragraph') => {
     const afterIndex = afterBlockId
       ? blocks.findIndex((b) => b.id === afterBlockId)
       : blocks.length - 1;
@@ -137,33 +212,31 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
     startTransition(() => {
       setBlocks(updatedBlocks as Block[]);
-      setIsDirty(true);
+      markDirtyAndScheduleSave();
     });
-  };
+  }, [blocks, baseId, markDirtyAndScheduleSave]);
 
-  const updateBlock = (id: string, updates: Partial<Block>) => {
-    const updatedBlocks = blocks.map((block) =>
-      block.id === id ? { ...block, ...updates } : block
+  const updateBlock = useCallback((id: string, updates: Partial<Block>) => {
+    setBlocks(prevBlocks => 
+      prevBlocks.map((block) =>
+        block.id === id ? { ...block, ...updates } as Block : block
+      )
     );
+    markDirtyAndScheduleSave();
+  }, [markDirtyAndScheduleSave]);
 
-    startTransition(() => {
-      setBlocks(updatedBlocks as Block[]);
-      setIsDirty(true);
-    });
-  };
-
-  const deleteBlock = (id: string) => {
+  const deleteBlock = useCallback((id: string) => {
     if (blocks.length === 1) return;
 
     const updatedBlocks = blocks.filter((block) => block.id !== id);
 
     startTransition(() => {
-      setBlocks(updatedBlocks as Block[]);
-      setIsDirty(true);
+      setBlocks(updatedBlocks);
+      markDirtyAndScheduleSave();
     });
-  };
+  }, [blocks, markDirtyAndScheduleSave]);
 
-  const duplicateBlock = (id: string) => {
+  const duplicateBlock = useCallback((id: string) => {
     const blockIndex = blocks.findIndex((b) => b.id === id);
     if (blockIndex === -1) return;
 
@@ -180,12 +253,12 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     ];
 
     startTransition(() => {
-      setBlocks(updatedBlocks as Block[]);
-      setIsDirty(true);
+      setBlocks(updatedBlocks);
+      markDirtyAndScheduleSave();
     });
-  };
+  }, [blocks, baseId, markDirtyAndScheduleSave]);
 
-  const moveBlock = (fromId: string, toId: string) => {
+  const moveBlock = useCallback((fromId: string, toId: string) => {
     if (fromId === toId) return;
 
     const fromIndex = blocks.findIndex((b) => b.id === fromId);
@@ -198,14 +271,22 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     newBlocks.splice(toIndex, 0, movedBlock);
 
     startTransition(() => {
-      setBlocks(newBlocks as Block[]);
-      setIsDirty(true);
+      setBlocks(newBlocks);
+      markDirtyAndScheduleSave();
     });
-  };
+  }, [blocks, markDirtyAndScheduleSave]);
 
-  const getContent = (): ArticleContent => {
+  const getContent = useCallback((): ArticleContent => {
     return { blocks };
-  };
+  }, [blocks]);
+
+  const saveNow = useCallback(async () => {
+    if (autoSaveTimerRef.current !== null) {
+      window.clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    await performSave();
+  }, [performSave]);
 
   return (
     <EditorContext.Provider
@@ -214,6 +295,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         blocks,
         isPending,
         isDirty,
+        isSaving,
+        lastSaved,
         createNewArticle,
         loadArticle,
         updateMetadata,
@@ -223,6 +306,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         duplicateBlock,
         moveBlock,
         getContent,
+        saveNow,
       }}
     >
       {children}

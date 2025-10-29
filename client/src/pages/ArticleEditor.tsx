@@ -38,7 +38,7 @@ function EditorContent() {
     return () => {
       cancelled = true;
     };
-  }, [id, loadArticle, createNewArticle]);
+  }, [id]);
 
   const handleSave = () => {
     if (!article) return;

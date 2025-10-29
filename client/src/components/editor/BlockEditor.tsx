@@ -1,26 +1,45 @@
-import { useState, useDeferredValue } from 'react';
+import { useState, useEffect, useDeferredValue } from 'react';
 import { useEditor } from '../../contexts/EditorContext';
 import type { Block } from '../../types';
 import DragHandle from './DragHandle';
 import BlockTypeMenu from './BlockTypeMenu';
 
-// 각 블록 타입별 에디터
 function BlockContent({ block }: { block: Block }) {
   const { updateBlock, addBlock, deleteBlock } = useEditor();
   const [showTypeMenu, setShowTypeMenu] = useState(false);
 
-  // RichText를 string으로 변환
-  const getContentString = (content: any): string => {
-    if (typeof content === 'string') return content;
-    if (Array.isArray(content)) {
-      return content.map(seg => seg.text).join('');
+  // 로컬 상태 (조합 중에도 안전하게 유지)
+  const [localValue, setLocalValue] = useState<string>(
+    typeof block.content === 'string' ? block.content : ''
+  );
+  const [isComposing, setIsComposing] = useState(false);
+
+  useEffect(() => {
+    // 외부 업데이트 반영
+    if (typeof block.content === 'string' && block.content !== localValue) {
+      setLocalValue(block.content);
     }
-    return '';
+  }, [block.content]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalValue(value);
+    if (!isComposing) {
+      updateBlock(block.id, { content: value });
+    }
+  };
+
+  const handleCompositionStart = () => setIsComposing(true);
+  const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    setIsComposing(false);
+    updateBlock(block.id, { content: e.currentTarget.value });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // / 키로 타입 메뉴 열기
-    if (e.key === '/' && block.type === 'paragraph' && getContentString(block.content) === '') {
+    if (isComposing) return; // 한글 조합 중엔 단축키 무시
+
+    // / 키로 블록 타입 메뉴
+    if (e.key === '/' && block.type === 'paragraph' && localValue === '') {
       e.preventDefault();
       setShowTypeMenu(true);
       return;
@@ -30,36 +49,39 @@ function BlockContent({ block }: { block: Block }) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       addBlock(block.id);
-      // 다음 블록으로 포커스 이동
       setTimeout(() => {
-        const nextBlock = e.currentTarget.closest('.block-wrapper')?.nextElementSibling?.querySelector('textarea, input');
-        (nextBlock as HTMLElement)?.focus();
+        const next = e.currentTarget
+          .closest('.block-wrapper')
+          ?.nextElementSibling?.querySelector('textarea, input');
+        (next as HTMLElement)?.focus();
       }, 50);
     }
 
     // Backspace로 빈 블록 삭제
-    if (e.key === 'Backspace' && (!('content' in block) || getContentString(block.content) === '')) {
+    if (e.key === 'Backspace' && localValue === '') {
       e.preventDefault();
       deleteBlock(block.id);
     }
   };
 
-  // Paragraph
+  // --- Paragraph ---
   if (block.type === 'paragraph') {
     return (
       <div className="relative">
         <textarea
-          value={getContentString(block.content)}
-          onChange={(e) => updateBlock(block.id, { content: e.target.value })}
+          value={localValue}
+          onChange={handleChange}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           onKeyDown={handleKeyDown}
           placeholder="내용을 입력하세요. '/'를 입력하여 블록 타입 선택"
           rows={1}
           className="w-full px-2 py-1 bg-transparent border-none outline-none text-light-text dark:text-dark-text placeholder-gray-400 resize-none"
           style={{ minHeight: '32px' }}
           onInput={(e) => {
-            const target = e.currentTarget;
-            target.style.height = 'auto';
-            target.style.height = target.scrollHeight + 'px';
+            const t = e.currentTarget;
+            t.style.height = 'auto';
+            t.style.height = t.scrollHeight + 'px';
           }}
         />
         {showTypeMenu && (
@@ -69,17 +91,24 @@ function BlockContent({ block }: { block: Block }) {
     );
   }
 
-  // Heading
+  // --- Heading ---
   if (block.type === 'heading') {
     const HeadingTag: React.ElementType = `h${block.level}`;
-    const fontSize = block.level === 1 ? 'text-3xl' : block.level === 2 ? 'text-2xl' : 'text-xl';
-    
+    const fontSize =
+      block.level === 1
+        ? 'text-3xl'
+        : block.level === 2
+        ? 'text-2xl'
+        : 'text-xl';
+
     return (
       <HeadingTag className={`${fontSize} font-bold`}>
         <input
           type="text"
-          value={getContentString(block.content)}
-          onChange={(e) => updateBlock(block.id, { content: e.target.value })}
+          value={localValue}
+          onChange={handleChange}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           onKeyDown={handleKeyDown}
           placeholder={`제목 ${block.level}`}
           className="w-full px-2 py-1 bg-transparent border-none outline-none text-light-text dark:text-dark-text placeholder-gray-400"
@@ -88,7 +117,7 @@ function BlockContent({ block }: { block: Block }) {
     );
   }
 
-  // Code
+  // --- Code ---
   if (block.type === 'code') {
     return (
       <div className="bg-gray-900 rounded-lg p-4 font-mono">
@@ -106,8 +135,10 @@ function BlockContent({ block }: { block: Block }) {
           <option value="python">Python</option>
         </select>
         <textarea
-          value={block.content}
-          onChange={(e) => updateBlock(block.id, { content: e.target.value })}
+          value={localValue}
+          onChange={handleChange}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           placeholder="코드를 입력하세요..."
           rows={5}
           className="w-full bg-transparent border-none outline-none text-green-400 font-mono text-sm resize-none"
@@ -116,7 +147,7 @@ function BlockContent({ block }: { block: Block }) {
     );
   }
 
-  // List
+  // --- List ---
   if (block.type === 'list') {
     return (
       <div className="space-y-2">
@@ -129,7 +160,7 @@ function BlockContent({ block }: { block: Block }) {
             </span>
             <input
               type="text"
-              value={getContentString(item)}
+              value={typeof item === 'string' ? item : ''}
               onChange={(e) => {
                 const newItems = [...block.items];
                 newItems[index] = e.target.value;
@@ -144,7 +175,7 @@ function BlockContent({ block }: { block: Block }) {
     );
   }
 
-  // Callout
+  // --- Callout ---
   if (block.type === 'callout') {
     const colors = {
       info: 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700',
@@ -156,8 +187,10 @@ function BlockContent({ block }: { block: Block }) {
     return (
       <div className={`${colors[block.variant]} border-l-4 p-4 rounded`}>
         <textarea
-          value={getContentString(block.content)}
-          onChange={(e) => updateBlock(block.id, { content: e.target.value })}
+          value={localValue}
+          onChange={handleChange}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           placeholder="Callout 내용..."
           rows={2}
           className="w-full bg-transparent border-none outline-none text-light-text dark:text-dark-text placeholder-gray-400 resize-none"
@@ -171,11 +204,10 @@ function BlockContent({ block }: { block: Block }) {
 
 export default function BlockEditor() {
   const { blocks } = useEditor();
-  const deferredBlocks = useDeferredValue(blocks);
 
   return (
     <div className="space-y-2 p-8 bg-light-surface dark:bg-dark-surface rounded-xl shadow-lg">
-      {deferredBlocks.map((block) => (
+      {blocks.map((block) => (
         <div key={block.id} className="block-wrapper relative group">
           <DragHandle blockId={block.id} />
           <div className="ml-0 group-hover:ml-10 transition-all duration-200">

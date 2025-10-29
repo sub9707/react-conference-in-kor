@@ -11,7 +11,7 @@ export default function MetadataForm() {
       <div>
         <input
           type="text"
-          value={article.title}
+          value={article.title || ''}
           onChange={(e) => updateMetadata({ title: e.target.value })}
           placeholder="제목을 입력하세요"
           className="w-full text-4xl font-bold bg-transparent border-none outline-none text-light-text dark:text-dark-text placeholder-gray-400"
@@ -25,7 +25,7 @@ export default function MetadataForm() {
         </label>
         <input
           type="text"
-          value={article.slug}
+          value={article.slug || ''}
           onChange={(e) => updateMetadata({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
           placeholder="url-slug"
           className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent text-light-text dark:text-dark-text focus:border-purple-500 outline-none"
@@ -40,8 +40,8 @@ export default function MetadataForm() {
           </label>
           <input
             type="number"
-            value={article.year}
-            onChange={(e) => updateMetadata({ year: parseInt(e.target.value) })}
+            value={article.year || new Date().getFullYear()}
+            onChange={(e) => updateMetadata({ year: parseInt(e.target.value) || new Date().getFullYear() })}
             className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent text-light-text dark:text-dark-text focus:border-purple-500 outline-none"
           />
         </div>
@@ -107,9 +107,37 @@ export default function MetadataForm() {
         </label>
         <input
           type="text"
-          value={article.tags.join(', ')}
+          value={(article.tags || []).join(', ')}
           onChange={(e) => updateMetadata({ tags: e.target.value.split(',').map(t => t.trim()).filter(t => t) })}
           placeholder="React, Hooks, Performance"
+          className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent text-light-text dark:text-dark-text focus:border-purple-500 outline-none"
+        />
+      </div>
+
+      {/* 비디오 URL */}
+      <div>
+        <label className="block text-sm font-semibold text-light-text dark:text-dark-text mb-2">
+          비디오 URL
+        </label>
+        <input
+          type="url"
+          value={article.video_url || ''}
+          onChange={(e) => updateMetadata({ video_url: e.target.value })}
+          placeholder="https://youtube.com/watch?v=..."
+          className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent text-light-text dark:text-dark-text focus:border-purple-500 outline-none"
+        />
+      </div>
+
+      {/* 썸네일 */}
+      <div>
+        <label className="block text-sm font-semibold text-light-text dark:text-dark-text mb-2">
+          썸네일 URL
+        </label>
+        <input
+          type="url"
+          value={article.thumbnail || ''}
+          onChange={(e) => updateMetadata({ thumbnail: e.target.value })}
+          placeholder="https://example.com/image.jpg"
           className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-transparent text-light-text dark:text-dark-text focus:border-purple-500 outline-none"
         />
       </div>
