@@ -1,0 +1,71 @@
+/* client/src/components/editor/RichTextEditor.css */
+
+/* Placeholder 스타일 */
+.rich-text-editor[contenteditable][data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #9CA3AF;
+  pointer-events: none;
+}
+
+.rich-text-editor[contenteditable] {
+  min-height: inherit;
+}
+
+.rich-text-editor[contenteditable]:focus {
+  outline: none;
+}
+
+/* 텍스트 스타일 적용 */
+.rich-text-editor b,
+.rich-text-editor strong {
+  font-weight: 700;
+}
+
+.rich-text-editor i,
+.rich-text-editor em {
+  font-style: italic;
+}
+
+.rich-text-editor u {
+  text-decoration: underline;
+}
+
+.rich-text-editor strike,
+.rich-text-editor s {
+  text-decoration: line-through;
+}
+
+.rich-text-editor code {
+  padding: 0.125rem 0.375rem;
+  background-color: #F3F4F6;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-family: ui-monospace, monospace;
+  color: #DC2626;
+}
+
+.dark .rich-text-editor code {
+  background-color: #1F2937;
+  color: #F87171;
+}
+
+/* 색상 스타일 */
+.rich-text-editor [style*="color"] {
+  /* 인라인 스타일 색상 유지 */
+}
+
+/* Toolbar 애니메이션 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.rich-text-toolbar {
+  animation: fadeIn 0.15s ease-out;
+}

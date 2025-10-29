@@ -37,25 +37,40 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [isPending, startTransition] = useTransition();
   const baseId = useId();
   const autoSaveTimerRef = useRef<number | null>(null);
+  
+  const articleRef = useRef(article);
+  const blocksRef = useRef(blocks);
+  const isDirtyRef = useRef(isDirty);
+  const tokenRef = useRef(token);
+
+  articleRef.current = article;
+  blocksRef.current = blocks;
+  isDirtyRef.current = isDirty;
+  tokenRef.current = token;
 
   const performSave = useCallback(async () => {
-    if (!article || !isDirty || article.id === 0 || !token) return;
+    const currentArticle = articleRef.current;
+    const currentBlocks = blocksRef.current;
+    const currentIsDirty = isDirtyRef.current;
+    const currentToken = tokenRef.current;
+
+    if (!currentArticle || !currentIsDirty || currentArticle.id === 0 || !currentToken) return;
 
     setIsSaving(true);
 
     try {
-      const content = { blocks };
+      const content = { blocks: currentBlocks };
       const updatedArticle = {
-        ...article,
+        ...currentArticle,
         content,
         updated_at: new Date().toISOString(),
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/admin/articles/${article.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/articles/${currentArticle.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${currentToken}`,
         },
         body: JSON.stringify(updatedArticle),
       });
@@ -77,7 +92,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsSaving(false);
     }
-  }, [article, blocks, isDirty, token]);
+  }, []);
 
   const scheduleAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current !== null) {
@@ -141,80 +156,45 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, [markDirtyAndScheduleSave]);
 
   const addBlock = useCallback((afterBlockId?: string, type: Block['type'] = 'paragraph') => {
-    const afterIndex = afterBlockId
-      ? blocks.findIndex((b) => b.id === afterBlockId)
-      : blocks.length - 1;
+    setBlocks(prevBlocks => {
+      const afterIndex = afterBlockId
+        ? prevBlocks.findIndex((b) => b.id === afterBlockId)
+        : prevBlocks.length - 1;
 
-    let newBlock: Block;
+      let newBlock: Block;
 
-    switch (type) {
-      case 'heading':
-        newBlock = {
-          id: `${baseId}-block-${Date.now()}`,
-          type: 'heading',
-          level: 1,
-          content: '',
-        } as Block;
-        break;
-      case 'code':
-        newBlock = {
-          id: `${baseId}-block-${Date.now()}`,
-          type: 'code',
-          language: 'javascript',
-          content: '',
-        } as Block;
-        break;
-      case 'list':
-        newBlock = {
-          id: `${baseId}-block-${Date.now()}`,
-          type: 'list',
-          listType: 'bullet',
-          items: [''],
-        } as Block;
-        break;
-      case 'callout':
-        newBlock = {
-          id: `${baseId}-block-${Date.now()}`,
-          type: 'callout',
-          variant: 'info',
-          content: '',
-        } as Block;
-        break;
-      case 'image':
-        newBlock = {
-          id: `${baseId}-block-${Date.now()}`,
-          type: 'image',
-          url: '',
-          alt: '',
-        } as Block;
-        break;
-      case 'video':
-        newBlock = {
-          id: `${baseId}-block-${Date.now()}`,
-          type: 'video',
-          url: '',
-          platform: 'youtube',
-        } as Block;
-        break;
-      default:
-        newBlock = {
-          id: `${baseId}-block-${Date.now()}`,
-          type: 'paragraph',
-          content: '',
-        } as Block;
-    }
+      switch (type) {
+        case 'heading':
+          newBlock = { id: `${baseId}-block-${Date.now()}`, type: 'heading', level: 1, content: '' } as Block;
+          break;
+        case 'code':
+          newBlock = { id: `${baseId}-block-${Date.now()}`, type: 'code', language: 'javascript', content: '' } as Block;
+          break;
+        case 'list':
+          newBlock = { id: `${baseId}-block-${Date.now()}`, type: 'list', listType: 'bullet', items: [''] } as Block;
+          break;
+        case 'callout':
+          newBlock = { id: `${baseId}-block-${Date.now()}`, type: 'callout', variant: 'info', content: '' } as Block;
+          break;
+        case 'image':
+          newBlock = { id: `${baseId}-block-${Date.now()}`, type: 'image', url: '', alt: '' } as Block;
+          break;
+        case 'video':
+          newBlock = { id: `${baseId}-block-${Date.now()}`, type: 'video', url: '', platform: 'youtube' } as Block;
+          break;
+        default:
+          newBlock = { id: `${baseId}-block-${Date.now()}`, type: 'paragraph', content: '' } as Block;
+      }
 
-    const updatedBlocks = [
-      ...blocks.slice(0, afterIndex + 1),
-      newBlock,
-      ...blocks.slice(afterIndex + 1),
-    ];
-
-    startTransition(() => {
-      setBlocks(updatedBlocks as Block[]);
-      markDirtyAndScheduleSave();
+      return [
+        ...prevBlocks.slice(0, afterIndex + 1),
+        newBlock,
+        ...prevBlocks.slice(afterIndex + 1),
+      ];
     });
-  }, [blocks, baseId, markDirtyAndScheduleSave]);
+    
+    markDirtyAndScheduleSave();
+  }, [baseId, markDirtyAndScheduleSave]);
 
   const updateBlock = useCallback((id: string, updates: Partial<Block>) => {
     setBlocks(prevBlocks => 
@@ -226,59 +206,56 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   }, [markDirtyAndScheduleSave]);
 
   const deleteBlock = useCallback((id: string) => {
-    if (blocks.length === 1) return;
-
-    const updatedBlocks = blocks.filter((block) => block.id !== id);
-
-    startTransition(() => {
-      setBlocks(updatedBlocks);
-      markDirtyAndScheduleSave();
+    setBlocks(prevBlocks => {
+      if (prevBlocks.length === 1) return prevBlocks;
+      return prevBlocks.filter((block) => block.id !== id);
     });
-  }, [blocks, markDirtyAndScheduleSave]);
+    markDirtyAndScheduleSave();
+  }, [markDirtyAndScheduleSave]);
 
   const duplicateBlock = useCallback((id: string) => {
-    const blockIndex = blocks.findIndex((b) => b.id === id);
-    if (blockIndex === -1) return;
+    setBlocks(prevBlocks => {
+      const blockIndex = prevBlocks.findIndex((b) => b.id === id);
+      if (blockIndex === -1) return prevBlocks;
 
-    const originalBlock = blocks[blockIndex];
-    const newBlock: Block = {
-      ...originalBlock,
-      id: `${baseId}-block-${Date.now()}`,
-    } as Block;
+      const originalBlock = prevBlocks[blockIndex];
+      const newBlock: Block = {
+        ...originalBlock,
+        id: `${baseId}-block-${Date.now()}`,
+      } as Block;
 
-    const updatedBlocks = [
-      ...blocks.slice(0, blockIndex + 1),
-      newBlock,
-      ...blocks.slice(blockIndex + 1),
-    ];
-
-    startTransition(() => {
-      setBlocks(updatedBlocks);
-      markDirtyAndScheduleSave();
+      return [
+        ...prevBlocks.slice(0, blockIndex + 1),
+        newBlock,
+        ...prevBlocks.slice(blockIndex + 1),
+      ];
     });
-  }, [blocks, baseId, markDirtyAndScheduleSave]);
+    
+    markDirtyAndScheduleSave();
+  }, [baseId, markDirtyAndScheduleSave]);
 
   const moveBlock = useCallback((fromId: string, toId: string) => {
     if (fromId === toId) return;
 
-    const fromIndex = blocks.findIndex((b) => b.id === fromId);
-    const toIndex = blocks.findIndex((b) => b.id === toId);
+    setBlocks(prevBlocks => {
+      const fromIndex = prevBlocks.findIndex((b) => b.id === fromId);
+      const toIndex = prevBlocks.findIndex((b) => b.id === toId);
 
-    if (fromIndex === -1 || toIndex === -1) return;
+      if (fromIndex === -1 || toIndex === -1) return prevBlocks;
 
-    const newBlocks = [...blocks];
-    const [movedBlock] = newBlocks.splice(fromIndex, 1);
-    newBlocks.splice(toIndex, 0, movedBlock);
-
-    startTransition(() => {
-      setBlocks(newBlocks);
-      markDirtyAndScheduleSave();
+      const newBlocks = [...prevBlocks];
+      const [movedBlock] = newBlocks.splice(fromIndex, 1);
+      newBlocks.splice(toIndex, 0, movedBlock);
+      
+      return newBlocks;
     });
-  }, [blocks, markDirtyAndScheduleSave]);
+    
+    markDirtyAndScheduleSave();
+  }, [markDirtyAndScheduleSave]);
 
   const getContent = useCallback((): ArticleContent => {
-    return { blocks };
-  }, [blocks]);
+    return { blocks: blocksRef.current };
+  }, []);
 
   const saveNow = useCallback(async () => {
     if (autoSaveTimerRef.current !== null) {

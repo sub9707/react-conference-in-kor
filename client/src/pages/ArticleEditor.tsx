@@ -1,3 +1,4 @@
+// client/src/pages/ArticleEditor.tsx
 import { useEffect, useState, useTransition } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { adminApi } from '../api/admin';
@@ -5,14 +6,39 @@ import { useEditor } from '../contexts/EditorContext';
 import MetadataForm from '../components/editor/MetadataForm';
 import BlockEditor from '../components/editor/BlockEditor';
 
+function SaveToast({ message, show }: { message: string; show: boolean }) {
+  if (!show) return null;
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <span className="text-green-600 dark:text-green-400 font-medium text-sm">
+        {message}
+      </span>
+    </div>
+  );
+}
+
 function EditorContent() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { article, loadArticle, createNewArticle, getContent, isDirty, updateMetadata } = useEditor();
+  const { article, loadArticle, createNewArticle, getContent, isDirty, updateMetadata, isSaving, lastSaved, saveNow } = useEditor();
   const [isPending, startTransition] = useTransition();
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSaveToast, setShowSaveToast] = useState(false);
+
+  // 자동 저장 완료 시 토스트 표시
+  useEffect(() => {
+    if (!isSaving && lastSaved) {
+      setShowSaveToast(true);
+      const timer = setTimeout(() => {
+        setShowSaveToast(false);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [lastSaved, isSaving]);
 
   // 기존 글 로드 또는 새 글 생성
   useEffect(() => {
@@ -40,91 +66,95 @@ function EditorContent() {
     };
   }, [id]);
 
-  const handleSave = () => {
-    if (!article) return;
+  const handleSave = async () => {
+    if (!article || isPending) return;
 
-    startTransition(() => {
+    startTransition(async () => {
       setSaveStatus('saving');
 
-      (async () => {
-        try {
+      try {
+        if (article.id === 0) {
+          // 새 글 생성
           const content = getContent();
+          const newArticle = await adminApi.createArticle({
+            ...article,
+            content,
+          });
 
-          if (article.id === 0) {
-            // 새 글 생성
-            const result = await adminApi.createArticle({
-              ...article,
-              content,
-            });
-            updateMetadata({ id: result.id });
-            setSaveStatus('saved');
-            setTimeout(() => navigate(`/admin/edit/${result.id}`), 1000);
-          } else {
-            // 기존 글 수정
-            await adminApi.updateArticle(article.id, {
-              ...article,
-              content,
-            });
-            setSaveStatus('saved');
-            setTimeout(() => setSaveStatus(null), 2000);
-          }
-        } catch (err) {
-          console.error('Save error:', err);
-          setSaveStatus('error');
-          setTimeout(() => setSaveStatus(null), 3000);
+          loadArticle(newArticle);
+          navigate(`/admin/editor/${newArticle.id}`, { replace: true });
+          setSaveStatus('saved');
+
+          setTimeout(() => setSaveStatus(null), 2000);
+        } else {
+          // 기존 글 업데이트 (자동 저장으로 처리됨)
+          await saveNow();
+          setSaveStatus('saved');
+
+          setTimeout(() => setSaveStatus(null), 2000);
         }
-      })();
+      } catch (err: any) {
+        console.error('Save error:', err);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus(null), 3000);
+      }
     });
   };
 
-  const handlePublishToggle = () => {
-    if (!article || article.id === 0) return;
+  const handlePublishToggle = async () => {
+    if (!article || article.id === 0 || isPending) return;
 
-    startTransition(() => {
-      (async () => {
-        try {
-          await adminApi.togglePublish(article.id, !article.published);
-          updateMetadata({ published: !article.published });
-        } catch (err) {
-          console.error('Publish error:', err);
-        }
-      })();
+    startTransition(async () => {
+      try {
+        const updatedArticle = await adminApi.togglePublish(article.id, !article.published);
+        loadArticle(updatedArticle);
+      } catch (err: any) {
+        console.error('Publish toggle error:', err);
+      }
     });
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent"></div>
-          <p className="mt-4 text-light-text dark:text-dark-text">글을 불러오는 중...</p>
-        </div>
+        <div className="text-lg text-gray-600 dark:text-gray-400">로딩 중...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-600 dark:text-red-400">{error}</p>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="text-lg text-red-600 dark:text-red-400">{error}</div>
+        <Link
+          to="/admin/articles"
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          목록으로 돌아가기
+        </Link>
       </div>
     );
   }
 
-  if (!article) return null;
+  if (!article) {
+    return null;
+  }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-12">
+    <div className="max-w-5xl mx-auto py-8 px-4">
       {/* 헤더 */}
-      <div className="flex justify-between items-center mb-8">
-        <Link 
-          to="/admin" 
-          className="text-light-text dark:text-dark-text hover:text-purple-600 transition-colors"
+      <div className="flex items-center justify-between mb-8">
+        <Link
+          to="/admin/articles"
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
         >
-          ← 목록으로
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          <span>목록으로</span>
         </Link>
-        
-        <div className="flex gap-3 items-center">
+
+        <div className="flex items-center gap-4">
           {saveStatus && (
             <span className={`text-sm font-medium ${
               saveStatus === 'saved' ? 'text-green-600' :
@@ -150,7 +180,7 @@ function EditorContent() {
               {article.published ? '발행 취소' : '발행하기'}
             </button>
           )}
-          
+
           <button
             onClick={handleSave}
             disabled={isPending || !isDirty}
@@ -168,6 +198,9 @@ function EditorContent() {
       <div className="mt-8">
         <BlockEditor />
       </div>
+
+      {/* 자동 저장 토스트 */}
+      <SaveToast message="✓ 저장되었습니다" show={showSaveToast} />
     </div>
   );
 }

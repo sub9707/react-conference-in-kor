@@ -1,3 +1,4 @@
+// client/src/api/admin.ts
 import type { Article, ArticleContent } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -45,7 +46,7 @@ export const adminApi = {
     thumbnail?: string;
     content: ArticleContent;
     published: boolean;
-  }): Promise<{ id: number }> {
+  }): Promise<Article> {
     const response = await fetch(`${API_URL}/api/admin/articles`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -57,7 +58,7 @@ export const adminApi = {
   },
 
   // 글 수정
-  async updateArticle(id: number, updates: Partial<Article>): Promise<void> {
+  async updateArticle(id: number, updates: Partial<Article>): Promise<Article> {
     const response = await fetch(`${API_URL}/api/admin/articles/${id}`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
@@ -65,6 +66,7 @@ export const adminApi = {
     });
     const data = await response.json();
     if (!data.success) throw new Error(data.message);
+    return data.data;
   },
 
   // 글 삭제
@@ -78,7 +80,7 @@ export const adminApi = {
   },
 
   // 발행 토글
-  async togglePublish(id: number, published: boolean): Promise<void> {
+  async togglePublish(id: number, published: boolean): Promise<Article> {
     const response = await fetch(`${API_URL}/api/admin/articles/${id}/publish`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -86,5 +88,6 @@ export const adminApi = {
     });
     const data = await response.json();
     if (!data.success) throw new Error(data.message);
+    return data.data;
   },
 };
