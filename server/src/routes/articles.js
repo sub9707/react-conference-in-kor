@@ -1,4 +1,3 @@
-// server/src/routes/articles.js
 import express from 'express';
 import {
   getAllArticles,
